@@ -141,7 +141,8 @@ export default function ShowList() {
               地点：{show.location || '待定'}
               <br />{show.address ? wrapAddress(show.address) : '待定'}
             </p>
-            <div style={{ height: '2em' }} />
+            {/* 封面图展示区：高度收窄（原 2em），让一屏能露出第二个剧目 */}
+            <div className="show-photo-gap" />
             <button className="show-intro" type="button" onClick={() => openIntro(show)}>
               点此查看演出介绍
             </button>

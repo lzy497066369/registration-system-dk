@@ -59,12 +59,17 @@ html.front-mode {
     display: block;
     width: 100%;
     margin-top: 0.51rem;
-    /* 按标题图原始比例（739×525）预留高度：图片没下载完时也占住位置，
-       否则 img 高度为 0、下载完成后把下面的登录卡片整体往下推一下。 */
-    aspect-ratio: 739 / 525;
+    /* 高度不再写死 739/525：后台换图后比例各不相同（现用的是 739×659），
+       写死旧比例会让真图被 contain 缩到框内、比兜底图小一圈。
+       现由 Login.tsx 用图片自身尺寸算出 aspect-ratio 传进来，宽度铺满、等比缩。 */
     height: auto;
-    /* 后台可换标题图，比例不同时等比缩进框内，不拉伸变形 */
     object-fit: contain;
+}
+
+/* 标题图还没就绪时的透明占位：只占住高度，避免登录卡片先上移再被推下去。
+   比例取旧默认图 739×525，属于过渡态，正常在启动遮罩撤掉之前就已经换成真图。 */
+.login-title-hold {
+    aspect-ratio: 739 / 525;
 }
 
 /* 登录卡片 */
@@ -335,6 +340,48 @@ html.front-mode {
     margin-top: 0.3rem;
 }
 
+/* ---------- 必填标记 + 即时格式提示（客户经理要求）---------- */
+/* 标题行右上角的红 *（联系电话 / 票券邮寄方式） */
+.req {
+    margin-left: 0.06rem;
+    color: #e54545;
+    font-style: normal;
+}
+
+/* 输入框 + 右侧红字的定位容器 */
+.form-field {
+    position: relative;
+}
+
+.form-field-gap .form-input {
+    margin-top: 0.3rem;
+}
+
+/* 输入框内为空时露出的红 *（详细地址 / 收件人 / 收件人手机号，
+   这三个字段没有小标题，标记直接放框内左侧；一输入就让位，避免压住正文） */
+.field-star {
+    position: absolute;
+    left: 0.24rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #e54545;
+    font-size: 0.3rem;
+    font-style: normal;
+    font-weight: 700;
+    pointer-events: none;
+}
+
+/* 还在输入（未失焦）但格式不对：框内右侧红字 */
+.field-err {
+    position: absolute;
+    right: 0.24rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #e54545;
+    font-size: 0.24rem;
+    pointer-events: none;
+}
+
 /* 票券邮寄方式：省市区三级联动，1:1 复刻原稿 list1.html（layui form + bioarea）渲染结果 */
 html.front-mode .layui-form.bio-form-box {
     margin-top: 0.3rem;
@@ -478,6 +525,17 @@ html.front-mode #bioarea-wrap .layui-edge {
     background: linear-gradient(90deg, #7f36f1 0%, #6517cb 100%);
 }
 
+/* 必填项没填齐 / 格式不对：按钮置灰不可点（客户经理要求） */
+.btn-next:disabled {
+    background: #c7c7d1;
+    color: #ffffff;
+    cursor: not-allowed;
+}
+
+.btn-next:disabled:active {
+    opacity: 1;
+}
+
 .btn-row button:active {
     opacity: 0.9;
 }
@@ -516,11 +574,18 @@ html.front-mode #bioarea-wrap .layui-edge {
 .show-card {
     position: relative;
     width: 5.42rem;
-    margin: 0.18rem auto 0;
-    padding: 0.3rem 0 0;
+    margin: 0.12rem auto 0;
+    padding: 0.26rem 0 0;
     background: #f4f2fa;
     border-radius: 0.25rem;
     overflow: hidden;
+}
+
+/* 剧目封面图展示区高度：原来 2em（桌面 200px）太高，一屏只放得下一张卡片，
+   客户要求尽量一屏看到两个剧目（第二个露出一部分即可），这里压到 1rem。
+   卡片底图是整卡 background-size: cover，这一块只是露出图片的「窗口」。 */
+.show-photo-gap {
+    height: 1rem;
 }
 
 /* 右上角已报满角标 */
@@ -540,7 +605,7 @@ html.front-mode #bioarea-wrap .layui-edge {
 }
 
 .show-card + .show-card {
-    margin-top: 0.44rem;
+    margin-top: 0.3rem;
 }
 
 .show-name {
@@ -556,6 +621,31 @@ html.front-mode #bioarea-wrap .layui-edge {
     line-height: 1.6;
     color: #333333;
     text-align: center;
+}
+
+/* 后台换的封面图可能是深色（舞台照），黑字压在上面看不清：
+   卡片顶部铺一层白色柔光渐变，越往下越透明，图片照样透出来，但剧目名/地点始终可读。 */
+.show-card::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 1.6rem;
+    background: linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.82) 0%,
+        rgba(255, 255, 255, 0.62) 50%,
+        rgba(255, 255, 255, 0) 100%
+    );
+    pointer-events: none;
+}
+
+/* 文字压在柔光层之上 */
+.show-name,
+.show-addr {
+    position: relative;
+    z-index: 1;
 }
 
 .show-photo {
@@ -586,7 +676,7 @@ html.front-mode #bioarea-wrap .layui-edge {
     border-radius: 0 0 0.25rem 0.25rem;
 }
 .show-label {
-    margin-top: 0.2rem;
+    margin-top: 0.12rem;
     font-size: 0.25rem;
     font-weight: 700;
     color: #333333;
@@ -596,7 +686,7 @@ html.front-mode #bioarea-wrap .layui-edge {
     display: block;
     width: 100%;
     height: 0.48rem;
-    margin-top: 0.18rem;
+    margin-top: 0.14rem;
     border: none;
     border-radius: 0.24rem;
     background: linear-gradient(90deg, #7f36f1 0%, #6517cb 100%);
@@ -755,6 +845,32 @@ html.front-mode #bioarea-wrap .layui-edge {
     color: #444444;
     text-align: center;
     word-break: break-word;
+}
+
+/* 错误类提示：文字变红 + 顶部红色感叹号图标（客户经理给的样式） */
+.fm-text-danger {
+    color: #d92d20;
+}
+
+.fm-icon {
+    width: 0.72rem;
+    height: 0.72rem;
+    margin: 0 auto;
+    border-radius: 50%;
+    background: #d92d20;
+    color: #ffffff;
+    font-size: 0.42rem;
+    font-weight: 700;
+    line-height: 0.72rem;
+    text-align: center;
+}
+
+/* 单按钮时图标小一号，别把弹窗撑太高 */
+.fm-icon-sm {
+    width: 0.6rem;
+    height: 0.6rem;
+    line-height: 0.6rem;
+    font-size: 0.34rem;
 }
 
 .fm-btn {

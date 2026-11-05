@@ -169,7 +169,11 @@ export default function Confirm() {
         cancelText="再改改"
         loading={submitting}
         onOk={submit}
-        onCancel={() => setConfirmOpen(false)}
+        // 「再改改」直接回报名页改信息，不是简单关掉弹层
+        onCancel={() => {
+          setConfirmOpen(false)
+          nav(`/a/${code}/form?session_id=${draft?.session_id}`)
+        }}
       >
         {reviewRows}
       </ConfirmDialog>

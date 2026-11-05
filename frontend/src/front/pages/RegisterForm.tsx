@@ -8,6 +8,15 @@ import '../front.css'
 // 邮寄地址默认省市（用户多数寄往北京）
 const DEFAULT_PROVINCE = '北京市'
 const DEFAULT_CITY = '北京市'
+// 手机号：1 开头 11 位
+const PHONE_RE = /^1\d{10}$/
+
+/** 记一项提示的附加形态：红色文案 / 按钮文案 / 左按钮（客户经理要求的双选择弹窗） */
+type TipOpts = {
+  danger?: boolean
+  okText?: string
+  cancel?: { text: string; go: () => void }
+}
 
 export default function RegisterForm() {
   const { code = '' } = useParams()
@@ -26,11 +35,13 @@ export default function RegisterForm() {
   const [recipientPhone, setRecipientPhone] = useState('')
   // 校验/提交失败的提示一律走弹层
   const [tip, setTip] = useState('')
+  const [tipOpts, setTipOpts] = useState<TipOpts>({})
   // 弹层关闭后要做的事（例如「已报满 → 回选择剧目页」）
   const tipAfter = useRef<null | (() => void)>(null)
 
-  function showTip(msg: string, after?: () => void) {
+  function showTip(msg: string, after?: () => void, opts: TipOpts = {}) {
     tipAfter.current = after || null
+    setTipOpts(opts)
     setTip(msg)
   }
 
@@ -38,7 +49,17 @@ export default function RegisterForm() {
     const after = tipAfter.current
     tipAfter.current = null
     setTip('')
+    setTipOpts({})
     if (after) after()
+  }
+
+  /** 双按钮弹窗的左按钮：只执行它自己的动作，不跑「关闭后回调」 */
+  function closeTipCancel() {
+    const go = tipOpts.cancel?.go
+    tipAfter.current = null
+    setTip('')
+    setTipOpts({})
+    if (go) go()
   }
 
   const session = useMemo(() => {
@@ -72,10 +93,13 @@ export default function RegisterForm() {
   }, [code])
 
   // 恢复上次未提交的草稿（仅限当前登录员工号，换人不复用）
+  // 注意：随行人数不在这里恢复 —— 草稿是按活动存的，而人数跟场次强相关，
+  // 换场次后沿用旧值就会出现「上一场带不了 → 这一场默认 0」这种串场 bug，
+  // 统一交给下面 initForSession 那段按 session_id 判断。
   useEffect(() => {
     const d = readDraft(code)
     if (d) {
-      setPhone(d.phone || ''); setCompanions(d.companions || 0)
+      setPhone(d.phone || '')
       // 老草稿可能没有省市：没有就落回默认北京，有省市但没选市则留空让用户自己选
       const p = d.province || DEFAULT_PROVINCE
       setProvince(p)
@@ -106,20 +130,24 @@ export default function RegisterForm() {
     ? `本场次剩余名额不足，最多可携带${maxCompanions}名家属，累计${maxCompanions + 1}人。`
     : `至高可携${maxCompanions}名成人家属共同参与，累计${maxCompanions + 1}人。`
 
-  // 默认值只落一次：名额是 5 秒轮询刷新的，每轮 data 都是新对象，
-  // 若每次都重设默认值，就会出现「默认 1 → 被场次上限压成 0 → 下一轮又变 1」的来回跳。
-  const defaultApplied = useRef(false)
+  // 随行人数初始化：每个场次只落一次。
+  // 关键修复：草稿里的 companions 只对「同一场次」有效。之前按活动维度存草稿，
+  // 从「带不了家属」的场次（人数被压成 0）切到名额充足的场次会继承 0；
+  // 从「带不满」的场次切过去则继承上一场的可携上限。换场次一律回到后台默认人数。
+  const initForSession = useRef<number | null>(null)
 
   useEffect(() => {
     if (!data) return
     // 浏览器标题统一用后台配置的活动名称
     setActivityTitle(data?.activity?.name)
-    if (defaultApplied.current) return
-    defaultApplied.current = true
-    if (readDraft(code)) return  // 有草稿时以草稿为准
-    // 初始值也要受场次上限约束（名额为 0 的场次上限就是 0，直接显示 0，不要先给 1 再收敛）
-    setCompanions(Math.max(0, Math.min(defaultCompanions, maxCompanions)))
-  }, [data, maxCompanions, defaultCompanions])
+    if (!session) return
+    if (initForSession.current === session.id) return
+    initForSession.current = session.id
+    const d = readDraft(code)
+    // 草稿属于当前场次才沿用，否则用后台默认值（再被本场次可携上限夹一次）
+    const want = d && Number(d.session_id) === session.id ? Number(d.companions ?? 0) : defaultCompanions
+    setCompanions(Math.max(0, Math.min(want, maxCompanions)))
+  }, [data, session, maxCompanions, defaultCompanions, code])
 
   // 只做「向下收敛」：轮询时剩余名额变少（别人抢走了），把已选人数压到新上限；
   // 从不往上抬，否则会和上面的一次性初始化互相打，出现 0/1 来回跳。
@@ -136,60 +164,86 @@ export default function RegisterForm() {
   }, [session, showCompanion, companions])
 
   // 进入报名页先按剩余名额判一次：
-  // 名额为 0 → 提示已报满并回选择剧目页；名额只够本人 → 提示不可携带家属；
-  // 名额够本人但不够活动上限 / 默认人数 → 提示最多可携带几人。
+  // 名额为 0 → 红字提示 + 「重选场次」；名额不够带家属 → 红字提示 + 「重选场次 / 继续报名」两个选择；
+  // 名额够本人但不够活动上限 / 默认人数 → 同上，让用户自己决定换场次还是就本人报名。
   const entered = useRef(false)
   useEffect(() => {
     if (!data || entered.current) return
+    const goList = () => nav(`/a/${code}/list`, { replace: true })
+    // 只能回剧目页的提示：红字 + 单按钮「重选场次」
+    const backOnly = (text: string) => showTip(text, goList, { danger: true, okText: '重选场次' })
     if (!session) {
       if (!sessionId) return
       entered.current = true
-      showTip('该场次不存在或已下线，请重新选择场次。', () => nav(`/a/${code}/list`, { replace: true }))
+      backOnly('该场次不存在或已下线，请重新选择场次。')
       return
     }
     entered.current = true
     const remaining = Math.max(0, Number(session.remaining ?? 0))
     if (session.status === 'full' || remaining <= 0) {
-      showTip('本场次已报满，请选择其他场次。', () => nav(`/a/${code}/list`, { replace: true }))
+      backOnly('本场次已报满，请选择其他场次。')
       return
     }
     if (session.status !== 'open') {
-      const text = session.status === 'not_started'
+      backOnly(session.status === 'not_started'
         ? '本场次报名尚未开始，请稍后再来。'
         : session.status === 'ended'
           ? '本场次报名已结束，请选择其他场次。'
-          : '本场次暂未开放报名，请选择其他场次。'
-      showTip(text, () => nav(`/a/${code}/list`, { replace: true }))
+          : '本场次暂未开放报名，请选择其他场次。')
       return
     }
     if (!companionEnabled) return
     const canCarry = Math.max(0, Math.min(activityMax, remaining - 1))
+    // 带不了家属 / 带不满：客户经理要求给「重选场次 / 继续报名」两个选择，
+    // 让用户自己决定是换个场次带家属，还是就本人（或少带人）报名。
+    const chooseTip = (text: string) => showTip(text, undefined, {
+      danger: true,
+      okText: '继续报名',
+      cancel: { text: '重选场次', go: goList },
+    })
     if (canCarry <= 0) {
-      showTip('本场次剩余名额不足，暂不可携带家属。')
+      chooseTip('本场次剩余名额不足，暂不可携带家属。如需携带家属，请返回选择别的场次。')
       return
     }
     if (canCarry < activityMax || canCarry < defaultCompanions) {
       // 不做任何去重：每次进入（含刷新）都按当前余量判一次并提示，避免出现「有时弹有时不弹」
-      showTip(`本场次剩余名额不足，最多可携带${canCarry}名家属。`)
+      chooseTip(`本场次剩余名额不足，最多可携带${canCarry}名家属。你可选择重选场次或继续报名。`)
     }
   }, [data, session, sessionId, code, companionEnabled, activityMax, defaultCompanions])
 
   const cities = useMemo(() => citiesOf(province), [province])
   const counties = useMemo(() => countiesOf(province, city), [province, city])
 
+  /* ---------- 实时校验（客户经理要求）----------
+     1) 手机号类字段：用户还在输入（没离开输入框）就按格式判断，不合格时输入框右侧显示红字「请检查格式」；
+     2) 必填项没填 / 格式不对 → 底部「确认，下一步」按钮置灰不可点，全部满足才恢复紫色。 */
+  const phoneOk = PHONE_RE.test(phone)
+  const phoneBad = phone.length > 0 && !phoneOk
+  const recipientPhoneOk = PHONE_RE.test(recipientPhone)
+  const recipientPhoneBad = recipientPhone.length > 0 && !recipientPhoneOk
+  const addressOk = address.trim().length > 0
+  const recipientOk = recipient.trim().length > 0
+  const regionOk = !!province && !!city
+  const quotaOk = !!session && session.status === 'open' && Number(session.remaining ?? 0) > 0
+  const companionOk = !showCompanion || companions <= maxCompanions
+  const canNext = quotaOk && phoneOk && regionOk && addressOk && recipientOk && recipientPhoneOk && companionOk
+
   function next() {
     if (!session) { showTip('场次信息加载中，请稍候'); return }
     // 名额复核：进页面后还在 5 秒轮询，提交前再判一次，避免名额被别人抢走后照样提交
     if (session.status === 'full' || (session.remaining ?? 0) <= 0) {
-      showTip('本场次已报满，请选择其他场次。', () => nav(`/a/${code}/list`, { replace: true }))
+      showTip('本场次已报满，请选择其他场次。', () => nav(`/a/${code}/list`, { replace: true }), {
+        danger: true,
+        okText: '重选场次',
+      })
       return
     }
     if (session.status !== 'open') { showTip('该场次当前不可报名'); return }
-    if (!/^1\d{10}$/.test(phone)) { showTip('请填写正确的联系电话'); return }
-    if (!province || !city) { showTip('请选择省份与城市'); return }
-    if (!address.trim()) { showTip('请填写详细收件地址'); return }
-    if (!recipient.trim()) { showTip('请填写收件人姓名'); return }
-    if (!/^1\d{10}$/.test(recipientPhone)) { showTip('请填写正确的收件人手机号'); return }
+    if (!phoneOk) { showTip('请填写正确的联系电话'); return }
+    if (!regionOk) { showTip('请选择省份与城市'); return }
+    if (!addressOk) { showTip('请填写详细收件地址'); return }
+    if (!recipientOk) { showTip('请填写收件人姓名'); return }
+    if (!recipientPhoneOk) { showTip('请填写正确的收件人手机号'); return }
     // 随行人数复核：超过剩余名额可带的人数不允许进下一步
     if (showCompanion && companions > maxCompanions) {
       showTip(`本场次剩余名额不足，最多可携带${maxCompanions}名家属，请调整随行人数。`)
@@ -238,11 +292,14 @@ export default function RegisterForm() {
 
         <h2 className="form-title">请填写具体报名信息</h2>
 
-        <h3 className="form-subtitle">您的联系电话</h3>
-        <input
-          className="form-input" type="tel" placeholder="联系电话"
-          value={phone} onChange={(e) => setPhone(e.target.value)}
-        />
+        <h3 className="form-subtitle">您的联系电话<em className="req">*</em></h3>
+        <div className="form-field">
+          <input
+            className="form-input" type="tel" placeholder="联系电话"
+            value={phone} onChange={(e) => setPhone(e.target.value)}
+          />
+          {phoneBad && <span className="field-err">请检查格式</span>}
+        </div>
 
         {showCompanion && (
           <>
@@ -270,7 +327,7 @@ export default function RegisterForm() {
           </>
         )}
 
-        <h3 className="form-subtitle">票券邮寄方式</h3>
+        <h3 className="form-subtitle">票券邮寄方式<em className="req">*</em></h3>
         <div className="layui-form bio-form-box">
           <div className="layui-form-item" id="bioarea-wrap">
             <div className="layui-form-select">
@@ -305,27 +362,47 @@ export default function RegisterForm() {
             </div>
           </div>
         </div>
-        <input
-          className="form-input" type="text" placeholder="详细收件地址"
-          value={address} onChange={(e) => setAddress(e.target.value)}
-        />
-        <input
-          className="form-input form-input-gap" type="text" placeholder="收件人姓名"
-          value={recipient} onChange={(e) => setRecipient(e.target.value)}
-        />
-        <input
-          className="form-input form-input-gap" type="tel" placeholder="收件人手机号"
-          value={recipientPhone} onChange={(e) => setRecipientPhone(e.target.value)}
-        />
+        <div className="form-field">
+          <input
+            className="form-input" type="text" placeholder="详细收件地址"
+            style={address ? undefined : { paddingLeft: '0.46rem' }}
+            value={address} onChange={(e) => setAddress(e.target.value)}
+          />
+          {!address && <em className="field-star">*</em>}
+        </div>
+        <div className="form-field form-field-gap">
+          <input
+            className="form-input" type="text" placeholder="收件人姓名"
+            style={recipient ? undefined : { paddingLeft: '0.46rem' }}
+            value={recipient} onChange={(e) => setRecipient(e.target.value)}
+          />
+          {!recipient && <em className="field-star">*</em>}
+        </div>
+        <div className="form-field form-field-gap">
+          <input
+            className="form-input" type="tel" placeholder="收件人手机号"
+            style={recipientPhone ? undefined : { paddingLeft: '0.46rem' }}
+            value={recipientPhone} onChange={(e) => setRecipientPhone(e.target.value)}
+          />
+          {!recipientPhone && <em className="field-star">*</em>}
+          {recipientPhoneBad && <span className="field-err">请检查格式</span>}
+        </div>
 
       </div>
 
       <div className="btn-row">
         <button className="btn-prev" type="button" onClick={() => nav(`/a/${code}/list`)}>上一步</button>
-        <button className="btn-next" type="button" onClick={next}>确认，下一步</button>
+        <button className="btn-next" type="button" onClick={next} disabled={!canNext}>确认，下一步</button>
       </div>
 
-      <AlertModal tip={tip} onClose={closeTip} />
+      <AlertModal
+        tip={tip}
+        onClose={closeTip}
+        danger={!!tipOpts.danger}
+        okText={tipOpts.okText}
+        cancelText={tipOpts.cancel?.text}
+        onCancel={tipOpts.cancel ? closeTipCancel : undefined}
+      />
     </div>
   )
 }

@@ -27,15 +27,30 @@ function dismissSplash() {
  * load 事件要等 CSS 和所有图片（含背景大图）都就绪，正好盖住这段中间态。
  */
 function dismissWhenLoaded() {
-  const finish = () => dismissSplash()
+  /*
+    登录页（/a/<活动编码>）额外等一个条件：标题块图预加载完。
+    标题图要在接口回来后才知道用哪张（活动配置图 / 兜底图），只等 window.load 会先露出
+    「没有标题图的半成品」，等图到了登录卡片再往下跳一下。Login.tsx 预加载完会派发 front-ready。
+    其它页面（后台、剧目列表等）行为不变。
+  */
+  const gated = /^\/a\/[^/]+\/?$/.test(location.pathname)
+  let loadDone = false
+  let frontDone = !gated
+  const finish = () => {
+    if (loadDone && frontDone) dismissSplash()
+  }
+  if (gated) {
+    window.addEventListener('front-ready', () => { frontDone = true; finish() }, { once: true })
+  }
+  const markLoad = () => { loadDone = true; finish() }
   if (document.readyState === 'complete') {
     // 已经 load 完了（缓存命中时很快），再等一帧确保这一帧已经画出来
-    requestAnimationFrame(() => requestAnimationFrame(finish))
-    return
+    requestAnimationFrame(() => requestAnimationFrame(markLoad))
+  } else {
+    window.addEventListener('load', markLoad, { once: true })
   }
-  window.addEventListener('load', finish, { once: true })
-  // 兜底：个别图片卡住或 404 时不能一直转圈
-  window.setTimeout(finish, 3000)
+  // 兜底：接口慢、图片卡住或 404 时不能一直转圈
+  window.setTimeout(() => { loadDone = true; frontDone = true; finish() }, 3000)
 }
 
 requestAnimationFrame(() => {

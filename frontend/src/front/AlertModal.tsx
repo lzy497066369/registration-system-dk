@@ -2,21 +2,46 @@ import type { ReactNode } from 'react'
 
 /** 前台统一提示弹层：替代页面底部的红字提示。
  *  用法：const [tip, setTip] = useState('')；setTip('员工号或邮箱不匹配') 即弹出；
- *  tip 为空时不渲染。样式见 front.css 的 .fm-* 系列。 */
+ *  tip 为空时不渲染。样式见 front.css 的 .fm-* 系列。
+ *
+ *  双按钮用法（客户经理要求：余票不足时让用户自己选「重选场次 / 继续报名」）：
+ *    <AlertModal tip="…" danger okText="继续报名" onClose={继续} cancelText="重选场次" onCancel={重选} />
+ */
 type Props = {
   tip: string
   onClose: () => void
   title?: string
+  /** 错误类提示：文字变红，标题位换成红色感叹号图标 */
+  danger?: boolean
+  /** 主按钮文案，默认「我知道了」 */
+  okText?: string
+  /** 传了 cancelText + onCancel 就变成左右两个按钮（左灰右紫） */
+  cancelText?: string
+  onCancel?: () => void
 }
 
-export default function AlertModal({ tip, onClose, title = '温馨提示' }: Props) {
+export default function AlertModal({
+  tip, onClose, title = '温馨提示', danger = false, okText = '我知道了', cancelText, onCancel,
+}: Props) {
   if (!tip) return null
+  const twoBtn = !!(cancelText && onCancel)
   return (
     <div className="fm-mask" role="dialog" aria-modal="true">
       <div className="fm-box">
-        <div className="fm-title">{title}</div>
-        <div className="fm-text">{tip}</div>
-        <button className="fm-btn" type="button" onClick={onClose}>我知道了</button>
+        {danger ? (
+          <div className={twoBtn ? 'fm-icon' : 'fm-icon fm-icon-sm'} aria-hidden>!</div>
+        ) : (
+          <div className="fm-title">{title}</div>
+        )}
+        <div className={danger ? 'fm-text fm-text-danger' : 'fm-text'}>{tip}</div>
+        {twoBtn ? (
+          <div className="fm-actions">
+            <button className="fm-btn-ghost" type="button" onClick={onCancel}>{cancelText}</button>
+            <button className="fm-btn" type="button" onClick={onClose}>{okText}</button>
+          </div>
+        ) : (
+          <button className="fm-btn" type="button" onClick={onClose}>{okText}</button>
+        )}
       </div>
     </div>
   )
