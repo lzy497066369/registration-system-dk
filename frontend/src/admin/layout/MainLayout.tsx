@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { App as AntdApp, Avatar, Breadcrumb, Dropdown, Layout, Menu, Space, Tag } from 'antd'
+import { App as AntdApp, Avatar, Breadcrumb, Dropdown, Form, Input, Layout, Menu, Modal, Space, Tag } from 'antd'
 import {
   AppstoreOutlined,
   KeyOutlined,
@@ -50,6 +50,10 @@ export default function MainLayout() {
   const [activities, setActivities] = useState<any[]>([])
   const [role, setRole] = useState<'admin' | 'viewer'>('admin')
   const [username, setUsername] = useState('')
+  // 修改密码弹窗：菜单里一直有这一项，之前没接后端接口，点了没反应
+  const [pwdOpen, setPwdOpen] = useState(false)
+  const [pwdSaving, setPwdSaving] = useState(false)
+  const [pwdForm] = Form.useForm()
   const [activityId, setActivityId] = useState<number | undefined>(() => {
     const v = localStorage.getItem('current_activity_id')
     return v ? Number(v) : undefined
@@ -104,8 +108,40 @@ export default function MainLayout() {
       { key: 'logout', icon: <LogoutOutlined />, label: '退出登录' },
     ],
     onClick: ({ key }: { key: string }) => {
-      if (key === 'logout') { clearToken(); nav('/admin/login') }
+      if (key === 'logout') { clearToken(); nav('/admin/login'); return }
+      if (key === 'password') { pwdForm.resetFields(); setPwdOpen(true) }
     },
+  }
+
+  /** 改自己的密码：后端 PUT /api/admin/password 校验原密码、新密码至少 8 位。
+   *  改完当前 token 仍有效（JWT 只带用户名），不需要重新登录。 */
+  async function submitPassword() {
+    let values: any
+    try {
+      values = await pwdForm.validateFields()
+    } catch {
+      return
+    }
+    if (values.new_password !== values.confirm_password) {
+      pwdForm.setFields([{ name: 'confirm_password', errors: ['两次输入的新密码不一致'] }])
+      return
+    }
+    setPwdSaving(true)
+    try {
+      await api('/api/admin/password', {
+        method: 'PUT',
+        body: JSON.stringify({
+          old_password: values.old_password,
+          new_password: values.new_password,
+        }),
+      })
+      setPwdOpen(false)
+      Modal.success({ title: '密码已修改', content: '下次登录请使用新密码。' })
+    } catch (err: any) {
+      Modal.error({ title: '修改失败', content: err?.message || '请稍后重试' })
+    } finally {
+      setPwdSaving(false)
+    }
   }
 
   return (
@@ -146,6 +182,41 @@ export default function MainLayout() {
           </Content>
         </Layout>
       </Layout>
+
+      <Modal
+        title="修改密码"
+        open={pwdOpen}
+        onCancel={() => setPwdOpen(false)}
+        onOk={submitPassword}
+        confirmLoading={pwdSaving}
+        okText="保存"
+        cancelText="取消"
+        destroyOnClose
+      >
+        <Form form={pwdForm} layout="vertical" style={{ marginTop: 12 }}>
+          <Form.Item
+            name="old_password" label="原密码"
+            rules={[{ required: true, message: '请输入原密码' }]}
+          >
+            <Input.Password placeholder="当前登录密码" autoComplete="current-password" />
+          </Form.Item>
+          <Form.Item
+            name="new_password" label="新密码"
+            rules={[
+              { required: true, message: '请输入新密码' },
+              { min: 8, message: '新密码至少 8 位' },
+            ]}
+          >
+            <Input.Password placeholder="至少 8 位" autoComplete="new-password" />
+          </Form.Item>
+          <Form.Item
+            name="confirm_password" label="确认新密码"
+            rules={[{ required: true, message: '请再输入一次新密码' }]}
+          >
+            <Input.Password placeholder="再输入一次" autoComplete="new-password" />
+          </Form.Item>
+        </Form>
+      </Modal>
     </ActivityContext.Provider>
     </AntdApp>
   )

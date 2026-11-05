@@ -21,6 +21,12 @@ tools/tunnel/cloudflared.exe
 tools/tunnel/tunnel.log
 tools/tunnel/public-url.txt
 
+# ===== 数据迁移产物：含员工姓名/邮箱/手机号，绝对不能进仓库 =====
+ticket.dump
+*.dump
+uploads.tar.gz
+*.tar.gz
+
 # ===== 密钥与本地配置：绝对不能进仓库 =====
 .env
 .env.local
