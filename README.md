@@ -147,11 +147,11 @@ tools\tunnel\start-tunnel.cmd
 整体链路：`git push` → GitHub Actions 自动构建镜像 → 推到 GHCR（GitHub 的镜像仓库）→ 服务器只拉镜像、不编译。相关文件：`.github/workflows/ghcr.yml`（构建流水线）、`docker-compose.prod.yml`（服务器编排）、`.env.prod.example`（服务器环境变量模板）。
 
 1. **代码进 GitHub（私有仓库）**。push 到 `main` 后 Actions 自动构建两个镜像：
-   `ghcr.io/<用户名>/<仓库名>-backend:latest` 与 `…-frontend:latest`。
+   `ghcr.io/lzy497066369/registration-system-dk-backend:latest` 与 `…-frontend:latest`。
    首次要在仓库 `Settings → Actions → General → Workflow permissions` 选 **Read and write permissions**。
    服务器是 ARM 的话，把 workflow 里 `PLATFORMS` 改成 `linux/arm64`（默认 `linux/amd64`，选错服务器上会报 `exec format error`）。
 2. **服务器装 Docker**：`curl -fsSL https://get.docker.com | sh`
-3. **服务器登录 GHCR**：GitHub 上建 classic PAT（勾 `read:packages`）后执行 `docker login ghcr.io -u <用户名>`，粘贴 PAT 当密码。镜像默认是私有包，不登录拉不到。
+3. **服务器登录 GHCR**：GitHub 上建 classic PAT（勾 `read:packages`）后执行 `docker login ghcr.io -u lzy497066369`，粘贴 PAT 当密码。镜像默认是私有包，不登录拉不到。
 4. **上传两个文件**到服务器部署目录（如 `/home/ticket`）：`docker-compose.prod.yml` 和 `.env`（由 `.env.prod.example` 复制填写，注意 `IMAGE_PREFIX` 全小写）。**不需要 clone 整个仓库。**
    密码建议在服务器上用 `openssl rand -hex 24` 现场生成，`.env.prod.example` 顶部有现成命令；改完 `chmod 600 .env`。
 5. **端口与 HTTPS**：本系统只用 **7000**（服务器上 7000~7003 属本批项目，挑未占用的那个，`ss -lntp | grep 7000` 可查占用）。对外由 `https://weixin.newedm.cn` 提供 HTTPS：80/443 已被其它服务占用时，把 `Caddyfile.snippet` 里那一段加进现有 Caddyfile 并 reload；80/443 空着时启用 `docker-compose.prod.yml` 里注释掉的 `caddy` 服务（此时 snippet 里的 `127.0.0.1:7000` 要改成 `frontend:80`）。完整操作见 **`DEPLOY.md`**。

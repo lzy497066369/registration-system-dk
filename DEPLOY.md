@@ -6,10 +6,11 @@
 
 | 项目 | 值 |
 |---|---|
+| 代码仓库 | `https://github.com/lzy497066369/registration-system-dk`（**建议先转为私有再 push**） |
 | 域名 | `https://weixin.newedm.cn`（2026-11-05 验证解析到 `123.6.146.55`） |
 | 服务器内部端口 | `7000`（7000~7003 属本批项目，目前全空） |
 | 部署目录 | `/home/ticket` |
-| 镜像 | `ghcr.io/<GitHub用户名>/<仓库名>-backend:latest`、`…-frontend:latest` |
+| 镜像 | `ghcr.io/lzy497066369/registration-system-dk-backend:latest`、`…-frontend:latest` |
 | 镜像架构 | `linux/amd64` |
 | 数据 | 全新安装，不迁移本地测试数据 |
 
@@ -31,7 +32,7 @@ cd /d "D:\桌面\2026SAP北分工会冬季家庭主题活动\registration-system
 ```
 
 ```cmd
-cd /d "D:\桌面\2026SAP北分工会冬季家庭主题活动\registration-system" && git remote add origin https://github.com/<用户名>/<仓库名>.git && git push -u origin main
+cd /d "D:\桌面\2026SAP北分工会冬季家庭主题活动\registration-system" && git remote add origin https://github.com/lzy497066369/registration-system-dk.git && git push -u origin main
 ```
 
 ## 第 2 步：打开 Actions 写权限（只做一次）
@@ -48,7 +49,7 @@ cd /d "D:\桌面\2026SAP北分工会冬季家庭主题活动\registration-system
 GitHub → `Settings → Developer settings → Personal access tokens (classic)` → 生成，只勾 `read:packages`。
 
 ```bash
-docker login ghcr.io -u <GitHub用户名>
+docker login ghcr.io -u lzy497066369
 # 密码粘贴 PAT；提示 Login Succeeded 即可
 ```
 
@@ -68,9 +69,7 @@ scp "D:\桌面\2026SAP北分工会冬季家庭主题活动\registration-system\d
 
 ```bash
 cd /home/ticket
-cp .env.prod.example .env
-# 换成实际镜像地址（全小写，换成你的 GitHub 用户名和仓库名）
-sed -i "s|^IMAGE_PREFIX=.*|IMAGE_PREFIX=ghcr.io/<GitHub用户名>/<仓库名>|" .env
+cp .env.prod.example .env      # 模板里 IMAGE_PREFIX 已填好本项目地址，可直接用
 # 密码现场生成，不在本机造好再传
 DB_PASSWORD=$(openssl rand -hex 24)
 JWT_SECRET=$(openssl rand -hex 32)
