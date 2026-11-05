@@ -1,0 +1,896 @@
+/* 前台 H5 样式 —— 直接采用设计稿 html/css/global.css（SAP 整合稿）
+   仅做两处必要改造：
+   1) 图片路径改为前端 public 绝对路径；
+   2) html/body 全局规则限定在 html.front-mode 下，避免前台样式泄漏影响后台界面。 */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* 以 620px 设计稿为基准：1rem = 100px */
+html.front-mode {
+    font-size: calc(100vw / 6.2);
+}
+
+@media screen and (min-width: 620px) {
+    html.front-mode {
+        font-size: 100px;
+    }
+}
+
+:where(html.front-mode) body {
+    max-width: 620px;
+    margin: 0 auto !important;
+    background: #f5f3fb;
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+    -webkit-tap-highlight-color: transparent;
+    /* 关键：原稿 body 继承 html 的 font-size（em 基准，如 height:2em 占位块=163px）；
+       antd 会给 body 设 font-size:16px 导致整页缩小，这里显式继承回来。
+       用 :where() 保持元素选择器级优先级，便于填信息页的 layui 等价规则覆盖。 */
+    font-size: inherit;
+}
+.center{
+    text-align: center;
+}
+.login-page {
+    position: relative;
+    min-height: 100vh;
+    overflow: hidden;
+    background: url("/images/login-bg.png") no-repeat center top;
+    background-size: cover;
+    padding-bottom: 0.5rem;
+}
+
+/* 左上角 Logo */
+.logo-img {
+    position: absolute;
+    top: 0.35rem;
+    left: 0.28rem;
+    z-index: 2;
+    display: block;
+    width: 0.78rem;
+}
+
+/* 标题图 */
+.login-title {
+    position: relative;
+    z-index: 9;
+    display: block;
+    width: 100%;
+    margin-top: 0.51rem;
+    /* 按标题图原始比例（739×525）预留高度：图片没下载完时也占住位置，
+       否则 img 高度为 0、下载完成后把下面的登录卡片整体往下推一下。 */
+    aspect-ratio: 739 / 525;
+    height: auto;
+    /* 后台可换标题图，比例不同时等比缩进框内，不拉伸变形 */
+    object-fit: contain;
+}
+
+/* 登录卡片 */
+.login-card {
+    position: relative;
+    z-index: 2;
+    margin: -0.91rem 0.28rem 0;
+    padding: 1.4rem 0.33rem 0.5rem;
+    background: rgba(255, 255, 255, 0.92);
+    border-radius: 0.3rem;
+}
+
+/* 登录卡片顶部的「员工登录」提示：放在原本留给标题图的留白里，绝对定位不占布局 */
+.login-tip {
+    position: absolute;
+    top: 0.68rem;
+    left: 0;
+    width: 100%;
+    font-size: 0.32rem;
+    font-weight: 700;
+    letter-spacing: 0.04rem;
+    /* 与下方「登录」按钮同一套紫色渐变（文字渐变），不支持时退回纯色 #7f36f1 */
+    color: #7f36f1;
+    background: linear-gradient(90deg, #7f36f1 0%, #6517cb 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-align: center;
+}
+
+/* 输入框：左右内边距收窄（0.37/0.34 → 0.26/0.2），把两侧的"空白"让给文字，
+   内容区从 375px 提到约 404px，字号才敢从 0.25rem 提到 0.27rem，
+   「请输入7位员工号（i+6位数字）」实测仍需约 376px，仍留 28px 余量 */
+.input-row {
+    display: flex;
+    align-items: center;
+    height: 0.83rem;
+    padding: 0 0.2rem 0 0.26rem;
+    background: #ffffff;
+    border-radius: 0.415rem;
+    box-shadow: 0 0.02rem 0.1rem rgba(102, 61, 180, 0.08);
+}
+
+.input-row + .input-row {
+    margin-top: 0.3rem;
+}
+
+.input-icon {
+    flex: none;
+}
+
+.icon-user {
+    width: 0.32rem;
+}
+
+.icon-mail {
+    width: 0.35rem;
+}
+
+.input-row input {
+    flex: 1;
+    height: 100%;
+    margin-left: 0.16rem;
+    border: none;
+    outline: none;
+    background: transparent;
+    font-size: 0.27rem;
+    color: #333333;
+}
+
+.input-row input::placeholder {
+    color: #9a9a9a;
+}
+
+/* 登录按钮 */
+.login-btn {
+    display: block;
+    width: 100%;
+    height: 0.75rem;
+    margin-top: 0.15rem;
+    border: none;
+    border-radius: 0.375rem;
+    background: linear-gradient(90deg, #7f36f1 0%, #6517cb 100%);
+    color: #ffffff;
+    font-size: 0.3rem;
+    letter-spacing: 0.04rem;
+    cursor: pointer;
+}
+
+.login-btn:active {
+    opacity: 0.9;
+}
+
+/* ==================== list1 报名页 ==================== */
+.list1-page {
+    min-height: 100vh;
+    background: #f5f3fb;
+    padding-bottom: 0.6rem;
+}
+
+/* 第一块：banner */
+.banner-img {
+    display: block;
+    width: 100%;
+}
+
+/* 第二块：step 步骤条 */
+.step-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 4.8rem;
+    height: 0.85rem;
+    margin: 0.33rem auto 0;
+    /* background: #ffffff; */
+    /* box-shadow: 0 0.04rem 0.14rem rgba(120, 100, 180, 0.10); */
+}
+
+.step-icon {
+    display: block;
+    width: 0.66rem;
+    height: 0.66rem;
+    border-radius: 50%;
+}
+
+.step-next {
+    width: 0.16rem;
+    margin: 0 0.2rem;
+}
+
+.step-icon-active {
+    position: relative;
+}
+
+.step-icon-active img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+}
+
+.step-clip {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.step-line {
+    width: 0.45rem;
+    margin: 0 0.12rem;
+    border-top: 0.03rem dotted #d2d2e0;
+}
+
+/* 第三块：list 列表 */
+/* 左右留白从 0.4rem 收到 0.26rem：表单/下拉/信息卡整体变宽，
+   字号才敢继续加大而不至于挤成两行 */
+.list-wrap {
+    padding: 0 0.26rem;
+}
+
+/* 报名成功提示 */
+.suc-tip {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 0.3rem;
+}
+
+.suc-icon {
+    width: 0.78rem;
+    flex: none;
+}
+
+.suc-text {
+    margin-left: 0.18rem;
+    font-size: 0.28rem;
+    line-height: 1.5;
+    color: #1a1a1a;
+}
+
+.suc-title {
+    font-weight: 700;
+}
+
+.suc-desc {
+    font-weight: 700;
+}
+.info-r{
+    background-color: #ffffff;
+    margin-top: .49rem;
+    padding: 0.43rem 0 0.45rem;
+    border-radius: 0.25rem;
+}
+.info-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 0.2rem;
+    font-size: 0.25rem;
+    color: #333333;
+}
+
+
+.info-row + .info-row {
+    margin-top: 0.32rem;
+}
+
+/* 观演地址也用 .info-row 行来放（演出地点 / 详细地址 各一行），
+   与「演出选择」「演出场次时间」等一致，不再单独做块级样式 */
+
+.info-value-strong {
+    font-weight: 700;
+}
+
+.form-title {
+    margin-top: 0.7rem;
+    font-size: 0.304rem;
+    font-weight: bold;
+    color: #1a1a1a;
+    text-align: center;
+}
+.aright{
+    text-align: right;
+}
+
+/* 成功页「邮寄状态」：已邮寄高亮，等待邮寄弱化 */
+.ship-shipped {
+    color: #12a150;
+}
+
+.ship-waiting {
+    color: #1677ff;
+    font-weight: 700;
+}
+.form-subtitle {
+    margin-top: 0.5rem;
+    padding: 0 0.24rem;
+    font-size: 0.29rem;
+    font-weight: 700;
+    color: #1a1a1a;
+}
+
+.form-title + .form-subtitle {
+    margin-top: 0.45rem;
+}
+
+.form-input {
+    display: block;
+    width: 100%;
+    height: 0.68rem;
+    margin-top: 0.16rem;
+    padding: 0 0.24rem;
+    border: none;
+    outline: none;
+    background: #ffffff;
+    border-radius: 0.12rem;
+    font-size: 0.28rem;
+    color: #333333;
+}
+
+.form-input::placeholder {
+    color: #b8b8c2;
+}
+
+.form-input-gap {
+    margin-top: 0.3rem;
+}
+
+/* 票券邮寄方式：省市区三级联动，1:1 复刻原稿 list1.html（layui form + bioarea）渲染结果 */
+html.front-mode .layui-form.bio-form-box {
+    margin-top: 0.3rem;
+}
+
+html.front-mode .layui-form-item#bioarea-wrap {
+    display: flex;
+    gap: 0.15rem;
+    margin: 0 0 15px;
+    padding-right: 0.15rem;
+}
+
+html.front-mode #bioarea-wrap .layui-form-select {
+    position: relative;
+    flex: 1 1 0%;
+    min-width: 0;
+}
+
+html.front-mode #bioarea-wrap .layui-input {
+    display: block;
+    width: 100%;
+    height: 0.68rem;
+    margin: 0;
+    padding: 0 34px 0 12px;
+    border: 1px solid #eeeeee;
+    border-radius: 0.12rem;
+    background-color: #ffffff;
+    color: rgba(0, 0, 0, .85);
+    /* 三列并排，字号不能无限放大：0.2rem（桌面 20px）已能完整放下「内蒙古自治区」，
+       再大会把长省名截断。下限 16px 是为了避免 iOS 聚焦时自动放大页面。 */
+    font-size: max(0.2rem, 16px);
+    line-height: 1.3;
+    outline: 0;
+    box-sizing: border-box;
+    appearance: none;
+    -webkit-appearance: none;
+}
+
+html.front-mode #bioarea-wrap .layui-input:disabled {
+    background-color: #ffffff;
+    color: rgba(0, 0, 0, .85);
+    opacity: 1;
+}
+
+html.front-mode #bioarea-wrap .layui-edge {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    margin-top: -3px;
+    width: 0;
+    height: 0;
+    border-width: 6px;
+    border-style: dashed;
+    border-color: transparent;
+    border-top-color: #c2c2c2;
+    border-top-style: solid;
+    pointer-events: none;
+}
+/* 出行人数卡片 */
+.people-card {
+    margin-top: 0.15rem;
+    padding: 0.2rem 0.22rem;
+    background: #ffffff;
+    border-radius: 0.13rem;
+}
+
+.people-tip {
+    font-size: 0.23rem;
+    line-height: 1.6;
+    color: #999999;
+}
+
+.people-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 0.18rem;
+}
+
+.people-label strong {
+    display: block;
+    font-size: 0.28rem;
+    color: #1a1a1a;
+}
+
+.people-label span {
+    display: block;
+    margin-top: 0.04rem;
+    font-size: 0.21rem;
+    color: #999999;
+}
+
+.stepper {
+    display: flex;
+    align-items: center;
+}
+
+.stepper-btn {
+    width: 0.46rem;
+    height: 0.46rem;
+    border: 1px solid #cfcfdd;
+    border-radius: 50%;
+    background: #ffffff;
+    color: #666666;
+    font-size: 0.28rem;
+    line-height: 0.46rem;
+    cursor: pointer;
+}
+
+.stepper-num {
+    min-width: 0.5rem;
+    text-align: center;
+    font-size: 0.3rem;
+    font-weight: 700;
+    color: #1a1a1a;
+}
+
+/* 底部按钮 */
+.btn-row {
+    display: flex;
+    gap: 0.26rem;
+    margin: 0.55rem 0.26rem 0;
+}
+
+.btn-row button {
+    height: 0.68rem;
+    border: none;
+    border-radius: 0.34rem;
+    font-size: 0.27rem;
+    color: #ffffff;
+    cursor: pointer;
+}
+
+.btn-prev {
+    flex: 11;
+    background: #c7c7d1;
+}
+
+.btn-next {
+    flex: 15;
+    background: linear-gradient(90deg, #7f36f1 0%, #6517cb 100%);
+}
+
+.btn-row button:active {
+    opacity: 0.9;
+}
+
+/* ==================== list 剧目选择页 ==================== */
+.list-page {
+    min-height: 100vh;
+    background: #f8f7fd;
+    padding-bottom: 0.63rem;
+}
+
+/* 步骤条（本页较窄，三图标均分） */
+.step-bar-list {
+    width: 100%;
+    height: 0.88rem;
+    margin-top: 0;
+    padding: 0.53rem 0.3rem;
+    background: url(/images/setpbg.png) no-repeat center center;
+    background-size: cover;
+}
+
+.step-bar-list .step-icon {
+    width: 0.6rem;
+    height: 0.6rem;
+}
+
+.list-title {
+    margin-top: 0.44rem;
+    font-size: 0.3rem;
+    font-weight: 700;
+    color: #1a1a1a;
+    text-align: center;
+}
+
+/* 剧目卡片 */
+.show-card {
+    position: relative;
+    width: 5.42rem;
+    margin: 0.18rem auto 0;
+    padding: 0.3rem 0 0;
+    background: #f4f2fa;
+    border-radius: 0.25rem;
+    overflow: hidden;
+}
+
+/* 右上角已报满角标 */
+.card-ribbon {
+    position: absolute;
+    top: 0.2rem;
+    right: -0.48rem;
+    width: 1.5rem;
+    height: 0.32rem;
+    line-height: 0.32rem;
+    background: rgba(50, 50, 50, 0.75);
+    color: #ffffff;
+    font-size: 0.19rem;
+    text-align: center;
+    transform: rotate(45deg);
+    z-index: 3;
+}
+
+.show-card + .show-card {
+    margin-top: 0.44rem;
+}
+
+.show-name {
+    font-size: 0.26rem;
+    font-weight: 700;
+    color: #1a1a1a;
+    text-align: center;
+}
+
+.show-addr {
+    margin-top: 0.15rem;
+    font-size: 0.23rem;
+    line-height: 1.6;
+    color: #333333;
+    text-align: center;
+}
+
+.show-photo {
+    display: block;
+    width: 100%;
+    margin-top: 0.39rem;
+    border-radius: 0.14rem;
+}
+
+.show-intro {
+    position: relative;
+    z-index: 1;
+    display: block;
+    height: 0.4rem;
+    margin: -0.2rem auto 0;
+    padding: 0 0.22rem;
+    border: none;
+    border-radius: 0.2rem;
+    background: linear-gradient(90deg, #7f36f1 0%, #6517cb 100%);
+    color: #ffffff;
+    font-size: 0.16rem;
+    cursor: pointer;
+}
+.show-cardb{
+    padding: 0.13rem 0.28rem 0.35rem;
+    margin-top:0.2rem;
+    background-color: rgba(240, 234, 227, 0.92);
+    border-radius: 0 0 0.25rem 0.25rem;
+}
+.show-label {
+    margin-top: 0.2rem;
+    font-size: 0.25rem;
+    font-weight: 700;
+    color: #333333;
+}
+
+.show-session {
+    display: block;
+    width: 100%;
+    height: 0.48rem;
+    margin-top: 0.18rem;
+    border: none;
+    border-radius: 0.24rem;
+    background: linear-gradient(90deg, #7f36f1 0%, #6517cb 100%);
+    color: #ffffff;
+    font-size: 0.23rem;
+    cursor: pointer;
+}
+
+/* 已报满场次 */
+.show-session-full {
+    background: #a7a4a6;
+    cursor: not-allowed;
+}
+
+.show-intro:active,
+.show-session:active {
+    opacity: 0.9;
+}
+
+/* 演出介绍弹层：全屏铺满（不再是居中小卡片），内容自身滚动 */
+.intro-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 620px;
+    height: 100%;
+    padding: 0;
+    background: #ffffff;
+    align-items: stretch;
+    justify-content: stretch;
+    z-index: 99;
+}
+
+.intro-modal-open {
+    display: flex;
+}
+
+.intro-dialog {
+    width: 100%;
+    height: 100%;
+    max-height: none;
+    padding: 0.26rem 0.4rem 0.6rem;
+    background: #ffffff;
+    border-radius: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* 标题左右留出空间，避免长标题压到右上角的 ✕ */
+.intro-title {
+    padding: 0 0.78rem;
+    font-size: 0.3rem;
+    font-weight: 700;
+    line-height: 1.5;
+    color: #1a1a1a;
+    text-align: center;
+}
+
+.intro-addr {
+    margin-top: 0.15rem;
+    font-size: 0.19rem;
+    line-height: 1.6;
+    color: #999999;
+    text-align: center;
+}
+
+.intro-body {
+    margin-top: 0.28rem;
+    font-size: 0.21rem;
+    line-height: 1.9;
+    color: #333333;
+    text-indent: 2em;
+}
+
+/* 演出介绍是多张大图：只限制「不超出容器」，不做横向拉伸。
+   之前写死 width:100%，窄长图（长截图，宽度可能只有一两百像素）会被硬拉到容器
+   全宽、放大好几倍，看起来就是糊成一片——所以这里改成只缩不放。 */
+.intro-body img {
+    display: block;
+    width: auto;
+    max-width: 100%;
+    height: auto;
+    margin: 0.08rem auto;
+}
+
+/* 关闭按钮：固定在弹层右上角，滚动时始终可见 */
+.intro-close {
+    position: absolute;
+    top: 0.24rem;
+    right: 0.28rem;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 0.62rem;
+    height: 0.62rem;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.06);
+    color: #444444;
+    font-size: 0.32rem;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.intro-close:active {
+    background: rgba(0, 0, 0, 0.14);
+}
+
+/* ==================== 补充：设计稿未覆盖的状态样式 ==================== */
+/* 禁用态（按钮、输入框、步进器） */
+.login-btn[disabled], .show-session[disabled], .btn-row button[disabled] { opacity: 0.6; cursor: not-allowed; }
+.show-session-full { background: #a7a4a6; cursor: not-allowed; }
+.stepper-btn[disabled] { color: #cccccc; cursor: not-allowed; }
+
+/* 错误提示（登录失败、提交校验不通过） */
+/* ==================== 通用提示弹层 ==================== */
+/* 前台所有校验/接口提示统一走这里，不再用页面底部红字 */
+.fm-mask {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 0.5rem;
+    background: rgba(0, 0, 0, 0.45);
+}
+
+.fm-box {
+    width: 100%;
+    max-width: 5.2rem;
+    padding: 0.48rem 0.42rem 0.4rem;
+    background: #ffffff;
+    border-radius: 0.24rem;
+    box-shadow: 0 0.12rem 0.4rem rgba(0, 0, 0, 0.18);
+    animation: fm-pop 0.18s ease-out;
+}
+
+.fm-title {
+    font-size: 0.34rem;
+    font-weight: 700;
+    color: #1a1a1a;
+    text-align: center;
+}
+
+.fm-text {
+    margin-top: 0.28rem;
+    font-size: 0.3rem;
+    line-height: 1.7;
+    color: #444444;
+    text-align: center;
+    word-break: break-word;
+}
+
+.fm-btn {
+    display: block;
+    width: 100%;
+    height: 0.76rem;
+    margin-top: 0.42rem;
+    border: none;
+    border-radius: 0.38rem;
+    background: linear-gradient(90deg, #7f36f1 0%, #6517cb 100%);
+    color: #ffffff;
+    font-size: 0.32rem;
+    letter-spacing: 0.02rem;
+    cursor: pointer;
+}
+
+.fm-btn:active {
+    opacity: 0.9;
+}
+
+/* 二次确认弹层（提交前把报名信息再列一遍）：内容区可滚动，底部两个按钮并排 */
+.fm-box-wide {
+    display: flex;
+    flex-direction: column;
+    max-height: 84vh;
+    padding: 0.44rem 0.4rem 0.38rem;
+}
+
+.fm-review {
+    flex: 1;
+    min-height: 0;
+    margin-top: 0.26rem;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.fm-review .info-row + .info-row {
+    margin-top: 0.24rem;
+}
+
+.fm-note {
+    margin-top: 0.26rem;
+    font-size: 0.26rem;
+    line-height: 1.6;
+    color: #e5484d;
+    text-align: center;
+}
+
+.fm-actions {
+    display: flex;
+    gap: 0.24rem;
+    margin-top: 0.34rem;
+}
+
+.fm-actions > button {
+    flex: 1;
+    height: 0.76rem;
+    border: none;
+    border-radius: 0.38rem;
+    font-size: 0.3rem;
+    cursor: pointer;
+}
+
+.fm-actions .fm-btn {
+    width: auto;
+    margin-top: 0;
+}
+
+.fm-btn-ghost {
+    background: #f1f1f6;
+    color: #666666;
+}
+
+.fm-actions > button[disabled] {
+    opacity: 0.65;
+    cursor: not-allowed;
+}
+
+@keyframes fm-pop {
+    from { opacity: 0; transform: translateY(0.1rem) scale(0.96); }
+    to { opacity: 1; transform: none; }
+}
+
+/* 补充说明文字（如「该剧目暂未开放场次」） */
+.show-session-hint { margin-top: 0.12rem; font-size: 0.17rem; color: #8a8a92; text-align: center; }
+
+/* 演出介绍弹层：遮罩不滚动，长内容由弹层自身滚动 */
+.intro-modal { overflow: hidden; }
+
+/* 演出介绍为富文本时，段落继承设计稿 .intro-body 的字号与缩进（仅继承，不另设样式） */
+.intro-body p { margin: 0; font-size: inherit; line-height: inherit; text-indent: inherit; }
+.intro-body p + p { margin-top: 0.2rem; }
+
+/* 兜底：antd 的 App 容器会设置 font-size:14px，前台必须继承 html 的基准，
+   否则 em 单位的尺寸（如 height:2em 占位块）与设计稿不一致 */
+html.front-mode .ant-app { font-size: inherit; }
+
+/* ==================== 填信息页：还原原稿引入的 layui 全局样式 ====================
+   原稿 html/list1.html 引入了 layui.css，它给 body 设了 14px + Helvetica Neue，
+   并让表单控件继承字体（button,input,...{font-family:inherit;font-size:inherit}）。
+   这里用 :where() 包裹以保持与 layui 完全相同的优先级（元素选择器级），
+   这样 .form-input / .stepper-btn / .btn-row button 自己的 rem 字号仍能生效。 */
+:where(html.front-mode.front-layui) body {
+    color: rgba(0, 0, 0, 0.85);
+    /* 与 layui 的 font 简写完全一致：简写会把 line-height 重置为 normal */
+    font: 14px Helvetica Neue, Helvetica, PingFang SC, Tahoma, Arial, sans-serif;
+}
+:where(html.front-mode.front-layui) button,
+:where(html.front-mode.front-layui) input,
+:where(html.front-mode.front-layui) optgroup,
+:where(html.front-mode.front-layui) option,
+:where(html.front-mode.front-layui) select,
+:where(html.front-mode.front-layui) textarea {
+    font-family: inherit;
+    font-size: inherit;
+    font-style: inherit;
+    font-weight: inherit;
+    outline: 0;
+}
+
+/* 原稿中除 body 外各文本元素的 line-height 均为浏览器默认 normal
+   （layui 只给 body 设了 1.6，浏览器对标题/段落等自带 normal 覆盖继承值）；
+   antd 的 reset 会把它们改成继承，这里显式还原。 */
+:where(html.front-mode.front-layui) h1,
+:where(html.front-mode.front-layui) h2,
+:where(html.front-mode.front-layui) h3,
+:where(html.front-mode.front-layui) h4,
+:where(html.front-mode.front-layui) h5,
+:where(html.front-mode.front-layui) h6,
+:where(html.front-mode.front-layui) p,
+:where(html.front-mode.front-layui) span,
+:where(html.front-mode.front-layui) div,
+:where(html.front-mode.front-layui) label,
+:where(html.front-mode.front-layui) strong,
+:where(html.front-mode.front-layui) em,
+:where(html.front-mode.front-layui) i,
+:where(html.front-mode.front-layui) b {
+    line-height: normal;
+}

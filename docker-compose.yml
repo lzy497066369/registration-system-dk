@@ -1,0 +1,59 @@
+# 密码等敏感值全部来自同目录 .env（不进仓库）；.env.example 说明要填哪些项
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: reg_db
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+      TZ: ${TZ:-Asia/Shanghai}
+    # 强制 PG 时区为北京时间：initdb 生成的 postgresql.conf 里写的是 UTC，
+    # 只设 TZ 环境变量不生效，会导致 func.now() 落库为 UTC（显示时间少 8 小时）。
+    command: postgres -c timezone=Asia/Shanghai -c log_timezone=Asia/Shanghai
+    ports:
+      - "5440:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      # $$ 是 compose 的转义写法，容器内 shell 再展开成实际用户名/库名
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    container_name: reg_backend
+    ports:
+      - "8110:8000"
+    # 固定 DNS：默认走 Docker 内嵌 DNS 转发宿主机，宿主机网络抖动/挂代理时
+    # 会解析不到 smtp.exmail.qq.com（gaierror -2），这里指定公共 DNS 兜底。
+    dns:
+      - 223.5.5.5
+      - 119.29.29.29
+    environment:
+      DATABASE_URL: postgresql+psycopg2://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRE_HOURS: ${JWT_EXPIRE_HOURS:-12}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      UPLOAD_DIR: ${UPLOAD_DIR:-/app/uploads}
+      TZ: ${TZ:-Asia/Shanghai}
+    volumes:
+      - uploads:/app/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build: ./frontend
+    container_name: reg_frontend
+    ports:
+      - "${FRONTEND_PORT:-5280}:80"
+    depends_on:
+      - backend
+
+volumes:
+  db_data:
+  uploads:

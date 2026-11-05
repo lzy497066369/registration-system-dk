@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>活动报名</title>
+    <!--
+      首屏防闪第一道：必须在 head 里同步执行，赶在浏览器第一次绘制之前把类挂上。
+      原来这一步在 FrontLayout 的 useEffect 里做，而 useEffect 是「画完才跑」，
+      于是首帧按 html 默认 16px 算 rem、第二帧才放大到 calc(100vw/6.2)，
+      慢网下就是肉眼可见的「整页放大一下」。
+    -->
+    <script>
+      (function () {
+        // 只有前台路由（/a/活动编码/…）需要这个类；后台和首页不加，
+        // 否则前台的 rem 基准（calc(100vw/6.2)）会漏进后台把字号放大。
+        if (location.pathname.indexOf('/a/') === 0) {
+          document.documentElement.classList.add('front-mode')
+        }
+      })()
+    </script>
+    <style>
+      /* 首屏防闪第二道：启动遮罩，全内联，不依赖任何外部 CSS/JS，
+         保证第一帧就有东西看，等 React 画完再淡出（见 src/main.tsx）。 */
+      #boot-splash {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #f5f3fb;
+        transition: opacity 0.26s ease;
+      }
+      #boot-splash.is-hidden {
+        opacity: 0;
+        pointer-events: none;
+      }
+      #boot-splash .boot-ring {
+        width: 32px;
+        height: 32px;
+        border: 3px solid rgba(127, 54, 241, 0.18);
+        border-top-color: #7f36f1;
+        border-radius: 50%;
+        animation: boot-spin 0.8s linear infinite;
+      }
+      @keyframes boot-spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      /*
+        关键骨架也内联一份：慢网下外部 CSS 可能晚于首屏渲染才到，
+        那一瞬间页面会按「默认 16px 字号 + 全宽」画一遍——图片按原始 739px 撑开、
+        背景图 cover 跟着放大，肉眼就是「画面先大后小」。内联后第一帧基准就是对的。
+        规则与 front.css 里同名选择器保持一致，重复但不冲突。
+      */
+      html.front-mode {
+        font-size: calc(100vw / 6.2);
+      }
+      @media screen and (min-width: 620px) {
+        html.front-mode {
+          font-size: 100px;
+        }
+      }
+      html.front-mode body {
+        max-width: 620px;
+        margin: 0 auto;
+        background: #f5f3fb;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="boot-splash"><div class="boot-ring"></div></div>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

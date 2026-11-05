@@ -1,0 +1,28 @@
+# ===== 依赖与缓存（别人 npm install / 容器启动会自己生成）=====
+node_modules/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# ===== 构建产物 =====
+dist/
+build/
+*.egg-info/
+
+# ===== 运行数据（跟数据库一起备份，不进代码仓库）=====
+uploads/
+output/
+*.log
+
+# ===== 密钥与本地配置：绝对不能进仓库 =====
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# ===== 编辑器 / 系统 =====
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

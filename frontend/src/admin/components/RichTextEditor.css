@@ -1,0 +1,38 @@
+/* Quill 高度修正：
+   quill.snow.css 里 .ql-container 是 height:100%，而 Quill 会把 toolbar 插到
+   .quill 的**前面**（兄弟节点），两者相加就超过外层固定高度，被 overflow:hidden
+   裁掉底部——表现就是「内容显示不全、滚动条拉不到最底」。
+   这里改成 flex 纵向布局：toolbar 固定高度，编辑容器占剩余高度并在内部滚动。 */
+.rich-editor {
+  display: flex;
+  flex-direction: column;
+}
+
+.rich-editor .ql-toolbar.ql-snow {
+  flex: 0 0 auto;
+  border: none;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.rich-editor .quill {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.rich-editor .ql-container.ql-snow {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: auto; /* 实际高度由 flex 拉伸决定，覆盖 quill 的 height:100% */
+  border: none;
+  font-size: 14px;
+  overflow: hidden;
+}
+
+.rich-editor .ql-editor {
+  height: 100%;
+  overflow-y: auto;
+  line-height: 1.7;
+}

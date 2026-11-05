@@ -1,0 +1,25 @@
+# ============================================================
+#  两种用法二选一：
+#
+#  用法一：服务器上已有 Caddy 在跑
+#    把下面 weixin.newedm.cn 那一段加进现有 Caddyfile，reload 即可。
+#    如果 Caddy 跑在容器里且用 bridge 网络，127.0.0.1 指向的是 Caddy 容器自己，
+#    要改成 host.docker.internal:7000（Caddy 的 compose 里加
+#    extra_hosts: ["host.docker.internal:host-gateway"]），或直接写宿主机内网 IP。
+#
+#  用法二：服务器上没有 Caddy（80/443 空着时）
+#    用 docker-compose.prod.yml 里注释掉的 caddy 服务，把本文件整个
+#    挂为 /etc/caddy/Caddyfile 启动即可。
+#
+#  前提（已验证 2026-11-05）：weixin.newedm.cn 解析到 123.6.146.55
+# ============================================================
+
+weixin.newedm.cn {
+	encode gzip
+	reverse_proxy 127.0.0.1:7000
+}
+
+# 保存后生效：
+#   caddy validate --config /etc/caddy/Caddyfile     # 先校验语法
+#   systemctl reload caddy                           # 宿主机安装的 Caddy
+#   或 docker compose -f docker-compose.prod.yml restart caddy   # 容器版

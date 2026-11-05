@@ -1,0 +1,96 @@
+# 服务器上用的编排文件：只拉 GHCR 镜像，不在服务器上构建。
+# 配套使用 .env（参考 .env.prod.example），服务器上只需这两个文件，不需要整个仓库。
+#
+# 与开发版 docker-compose.yml 的区别：
+#   1. backend / frontend 用 ghcr.io 镜像（IMAGE_PREFIX 在 .env 里配置）
+#   2. db 和 backend 不再对宿主机开放端口（数据库不暴露公网）
+#   3. 全部 restart: always，服务器重启后自动拉起
+#
+# 常用命令（服务器上）：
+#   拉镜像并启动： docker compose -f docker-compose.prod.yml pull && docker compose -f docker-compose.prod.yml up -d
+#   更新（push 后）：同上一条
+#   回滚：         .env 里把 IMAGE_TAG 改成上一版的 sha-xxxxxxx，再 up -d
+#   看日志：       docker compose -f docker-compose.prod.yml logs -f backend
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: reg_db
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+      TZ: ${TZ:-Asia/Shanghai}
+    # 强制 PG 时区为北京时间：initdb 生成的 postgresql.conf 里写的是 UTC，
+    # 只设 TZ 环境变量不生效，会导致 func.now() 落库为 UTC（显示时间少 8 小时）。
+    command: postgres -c timezone=Asia/Shanghai -c log_timezone=Asia/Shanghai
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      # $$ 是 compose 的转义写法，容器内 shell 再展开成实际用户名/库名
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    image: ${IMAGE_PREFIX}-backend:${IMAGE_TAG:-latest}
+    container_name: reg_backend
+    restart: always
+    # 固定 DNS：默认走 Docker 内嵌 DNS 转发宿主机，宿主机网络抖动时会
+    # 解析不到 smtp.exmail.qq.com（gaierror -2），这里指定公共 DNS 兜底。
+    dns:
+      - 223.5.5.5
+      - 119.29.29.29
+    environment:
+      DATABASE_URL: postgresql+psycopg2://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRE_HOURS: ${JWT_EXPIRE_HOURS:-12}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      UPLOAD_DIR: ${UPLOAD_DIR:-/app/uploads}
+      TZ: ${TZ:-Asia/Shanghai}
+    volumes:
+      - uploads:/app/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    image: ${IMAGE_PREFIX}-frontend:${IMAGE_TAG:-latest}
+    container_name: reg_frontend
+    restart: always
+    ports:
+      # 只监听 7000，HTTPS 由服务器上已有的 Caddy 反代过来（见 Caddyfile.snippet）。
+      # 不要用 127.0.0.1:7000 绑定：如果 Caddy 跑在容器里，回环地址访问不到本容器。
+      # 安全性靠安全组：只开 22/80/443，7000 不对公网放行。
+      - "${FRONTEND_PORT:-7000}:80"
+    depends_on:
+      - backend
+
+  # ------------------------------------------------------------------
+  # 可选：服务器上没有别的 Caddy、且 80/443 空闲时才启用（删掉整段的注释符）。
+  # 启用时要把 Caddyfile.snippet 里的 127.0.0.1:7000 改成 frontend:80
+  # （容器之间用服务名互访，走不到宿主机的 7000）。
+  # 只要启用这段，前端的 7000 端口映射可以保留（内部调试用）也可以删掉。
+  # ------------------------------------------------------------------
+  # caddy:
+  #   image: caddy:2-alpine
+  #   container_name: reg_caddy
+  #   restart: always
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   volumes:
+  #     - ./Caddyfile.snippet:/etc/caddy/Caddyfile:ro
+  #     - caddy_data:/data
+  #     - caddy_config:/config
+  #   depends_on:
+  #     - frontend
+
+volumes:
+  db_data:
+  uploads:
+  # caddy_data:
+  # caddy_config:
