@@ -6,7 +6,7 @@
 
 | 项目 | 值 |
 |---|---|
-| 代码仓库 | `https://github.com/lzy497066369/registration-system-dk`（**建议先转为私有再 push**） |
+| 代码仓库 | `https://github.com/lzy497066369/registration-system-dk`（当前为公开仓库，建议在 Settings 里转为私有） |
 | 域名 | `https://weixin.newedm.cn`（2026-11-05 验证解析到 `123.6.146.55`） |
 | 服务器内部端口 | `7000`（7000~7003 属本批项目，目前全空） |
 | 部署目录 | `/home/ticket` |
