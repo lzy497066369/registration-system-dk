@@ -15,6 +15,12 @@ uploads/
 output/
 *.log
 
+# ===== 内网穿透工具：二进制和运行产物不入库（文件留在本地照样能用）=====
+# cloudflared.exe 55MB，超过 GitHub 单文件建议上限
+tools/tunnel/cloudflared.exe
+tools/tunnel/tunnel.log
+tools/tunnel/public-url.txt
+
 # ===== 密钥与本地配置：绝对不能进仓库 =====
 .env
 .env.local
