@@ -261,22 +261,38 @@ html.front-mode {
 }
 .info-r{
     background-color: #ffffff;
-    margin-top: .49rem;
-    padding: 0.43rem 0 0.45rem;
+    margin-top: 0.3rem;
+    padding: 0.3rem 0 0.32rem;
     border-radius: 0.25rem;
 }
 .info-row {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
+    /* 值可能折成多行（长地址）：标签与值的第一行顶部对齐，不再垂直居中错位 */
+    align-items: flex-start;
     padding: 0 0.2rem;
     font-size: 0.25rem;
+    line-height: 1.45;
     color: #333333;
 }
 
 
 .info-row + .info-row {
-    margin-top: 0.32rem;
+    margin-top: 0.22rem;
+}
+
+/* 标签固定不换行：值再长也不许把标签挤成竖排（「票券/邮寄/地址」那种） */
+.info-label {
+    flex: none;
+    white-space: nowrap;
+    margin-right: 0.2rem;
+}
+
+/* 值占满剩余宽度：短值贴右（与原 space-between 观感一致），长值右对齐折行不溢出 */
+.info-value {
+    flex: 1;
+    min-width: 0;
+    text-align: right;
+    word-break: break-word;
 }
 
 /* 观演地址也用 .info-row 行来放（演出地点 / 详细地址 各一行），
@@ -286,8 +302,34 @@ html.front-mode {
     font-weight: 700;
 }
 
+/* 超长内容（票券邮寄地址：省市区 + 详细地址 + 收件人 + 电话）
+   左右挤压太乱，改为「标签在上、内容在下」整行排布，长文本左对齐更好读 */
+.info-row-block {
+    display: block;
+}
+
+.info-row-block .info-label {
+    display: block;
+    margin: 0 0 0.06rem;
+    color: #666666;
+}
+
+.info-row-block .info-value {
+    display: block;
+    text-align: left;
+    line-height: 1.5;
+}
+
+/* 「票券邮寄信息」分组标题：与标签同字号（不缩小），用灰色弱化，把收件人/电话/地址归成一组 */
+.info-group-title {
+    margin: 0.24rem 0 0.1rem;
+    padding: 0 0.2rem;
+    font-size: 0.25rem;
+    color: #999999;
+}
+
 .form-title {
-    margin-top: 0.7rem;
+    margin-top: 0.36rem;
     font-size: 0.304rem;
     font-weight: bold;
     color: #1a1a1a;
@@ -817,7 +859,8 @@ html.front-mode #bioarea-wrap .layui-edge {
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 0 0.5rem;
+    /* 两侧留白收窄一点：给确认弹窗腾宽度（字号不变，靠加宽区域提升可读性） */
+    padding: 0 0.2rem;
     background: rgba(0, 0, 0, 0.45);
 }
 
@@ -895,24 +938,26 @@ html.front-mode #bioarea-wrap .layui-edge {
 .fm-box-wide {
     display: flex;
     flex-direction: column;
-    max-height: 84vh;
-    padding: 0.44rem 0.4rem 0.38rem;
+    /* 确认弹窗比普通提示弹窗宽一档：信息行多、值长，宽一点少折行更整齐（字号不变） */
+    max-width: 5.76rem;
+    max-height: 92vh;
+    padding: 0.3rem 0.34rem 0.26rem;
 }
 
 .fm-review {
     flex: 1;
     min-height: 0;
-    margin-top: 0.26rem;
+    margin-top: 0.18rem;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
 }
 
 .fm-review .info-row + .info-row {
-    margin-top: 0.24rem;
+    margin-top: 0.18rem;
 }
 
 .fm-note {
-    margin-top: 0.26rem;
+    margin-top: 0.18rem;
     font-size: 0.26rem;
     line-height: 1.6;
     color: #e5484d;
@@ -922,7 +967,7 @@ html.front-mode #bioarea-wrap .layui-edge {
 .fm-actions {
     display: flex;
     gap: 0.24rem;
-    margin-top: 0.34rem;
+    margin-top: 0.24rem;
 }
 
 .fm-actions > button {

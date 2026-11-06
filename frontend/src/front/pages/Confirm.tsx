@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { formatShowTime, cleanAddress, frontApi, getToken, readDraft, draftKey, guardBeforeRegister, setActivityTitle } from '../api'
+import { formatShowTime, cleanAddress, joinRegion, frontApi, getToken, readDraft, draftKey, guardBeforeRegister, setActivityTitle } from '../api'
 import AlertModal, { ConfirmDialog } from '../AlertModal'
 import '../front.css'
 
@@ -123,12 +123,20 @@ export default function Confirm() {
         <span className="info-label">观演人数</span>
         <span className="info-value info-value-strong">{headcount} 人</span>
       </div>
+      {/* 邮寄信息分组：收件人 / 联系电话 走两列行，邮寄地址长文本单独块状整行 */}
+      <div className="info-group-title">票券邮寄信息</div>
       <div className="info-row">
-        <span className="info-label">票券邮寄地址</span>
-        <span className="info-value info-value-strong aright">
-          {draft?.province}{draft?.city}{draft?.county}{draft?.address}<br />
-          {draft?.recipient}<br />
-          {draft?.recipientPhone}
+        <span className="info-label">收件人</span>
+        <span className="info-value info-value-strong">{draft?.recipient}</span>
+      </div>
+      <div className="info-row">
+        <span className="info-label">联系电话</span>
+        <span className="info-value info-value-strong">{draft?.recipientPhone}</span>
+      </div>
+      <div className="info-row info-row-block">
+        <span className="info-label">邮寄地址</span>
+        <span className="info-value info-value-strong">
+          {joinRegion(draft?.province, draft?.city, draft?.county, draft?.address)}
         </span>
       </div>
     </>

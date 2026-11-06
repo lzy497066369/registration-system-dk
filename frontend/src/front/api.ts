@@ -163,6 +163,22 @@ export function cleanAddress(address?: string): string {
 }
 
 /**
+ * 省 / 市 / 区 + 详细地址拼接展示：相邻重复的地名只显示一次。
+ * 例如 省=北京市、市=北京市、区=顺义区 → 「北京市顺义区」，不再出现「北京市北京市顺义区」。
+ */
+export function joinRegion(...parts: (string | undefined | null)[]): string {
+  const out: string[] = []
+  for (const p of parts) {
+    const t = (p || '').trim()
+    if (!t) continue
+    const last = out[out.length - 1]
+    if (last && (last === t || last.endsWith(t))) continue
+    out.push(t)
+  }
+  return out.join('')
+}
+
+/**
  * 观演地址整串：北京音乐厅（具体地址：北京市西城区北新华街1号）
  * 详细地址自带的括号 / 「具体地址：」前缀会先剥掉再统一拼，避免出现两层括号。
  */

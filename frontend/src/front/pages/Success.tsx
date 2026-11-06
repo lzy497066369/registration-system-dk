@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { formatShowTime, cleanAddress, frontApi, getToken, guardHasRegistration, setActivityTitle } from '../api'
+import { formatShowTime, cleanAddress, joinRegion, frontApi, getToken, guardHasRegistration, setActivityTitle } from '../api'
 import '../front.css'
 
 export default function Success() {
@@ -78,12 +78,20 @@ export default function Success() {
               {reg?.seats ?? (reg?.companion_count ?? 0) + 1} 人
             </span>
           </div>
+          {/* 邮寄信息分组：收件人 / 联系电话 走两列行，邮寄地址长文本单独块状整行 */}
+          <div className="info-group-title">票券邮寄信息</div>
           <div className="info-row">
-            <span className="info-label">票券邮寄地址</span>
-            <span className="info-value info-value-strong aright">
-              {reg?.province}{reg?.city}{reg?.county}{reg?.address_detail}<br />
-              {reg?.recipient_name}<br />
-              {reg?.recipient_phone}
+            <span className="info-label">收件人</span>
+            <span className="info-value info-value-strong">{reg?.recipient_name}</span>
+          </div>
+          <div className="info-row">
+            <span className="info-label">联系电话</span>
+            <span className="info-value info-value-strong">{reg?.recipient_phone}</span>
+          </div>
+          <div className="info-row info-row-block">
+            <span className="info-label">邮寄地址</span>
+            <span className="info-value info-value-strong">
+              {joinRegion(reg?.province, reg?.city, reg?.county, reg?.address_detail)}
             </span>
           </div>
           <div className="info-row">
