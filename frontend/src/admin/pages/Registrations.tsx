@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import {
-  App, Button, Card, Col, DatePicker, Descriptions, Form, Input, Modal, Popconfirm,
+  App, Button, Card, Col, DatePicker, Descriptions, Form, Input, Modal,
   Row, Select, Space, Statistic, Table, Tag, Upload, message,
 } from 'antd'
 import {
@@ -109,26 +109,17 @@ export default function Registrations() {
     } catch (err: any) { msg.error(err.message) }
   }
 
-  async function cancelRow(row: any) {
-    try {
-      await api(`/api/admin/registrations/${row.id}/cancel`, { method: 'POST' })
-      msg.success('已取消，名额已释放')
-      load(page); loadStats()
-    } catch (err: any) { msg.error(err.message) }
-  }
-
   async function deleteRow(row: any) {
-    const active = row.status !== 'cancelled'
     modal.confirm({
       title: `确认删除报名单 ${row.reg_no || `#${row.id}`}？`,
       width: 520,
       content: (
         <div style={{ lineHeight: 1.9 }}>
           <div>· 该报名单将从报名管理中<b>彻底删除</b>，无法恢复</div>
-          {active && <div>· 已占用名额：<b>{row.seats} 个</b>，删除后自动退回该场次</div>}
+          <div>· 已占用名额：<b>{row.seats} 个</b>，删除后自动退回该场次</div>
           <div>· 该员工删除后可重新报名，但历史修改记录与邮件记录一并清除</div>
           <div style={{ color: '#cf1322', marginTop: 8 }}>
-            只想作废但保留记录，请用「取消」；删除后数据不可恢复，建议先点「导出 Excel」备份。
+            删除即视为取消报名，记录不可恢复，建议先点「导出 Excel」备份。
           </div>
         </div>
       ),
@@ -155,8 +146,8 @@ export default function Registrations() {
       width: 560,
       content: (
         <div style={{ lineHeight: 1.9 }}>
-          <div>· 当前该活动共有报名单 <b>{total} 条</b>，将<b>全部删除</b>（含已取消）</div>
-          <div>· 其中未取消的报名单占用 <b>{seats} 个</b>名额，删除后自动退回各场次</div>
+          <div>· 当前该活动共有报名单 <b>{total} 条</b>，将<b>全部删除</b></div>
+          <div>· 其中占用 <b>{seats} 个</b>名额，删除后自动退回各场次</div>
           <div>· 修改留痕与邮件发送记录一并清除，员工可重新报名</div>
           <div style={{ color: '#cf1322', marginTop: 8 }}>
             删除后不可恢复，建议先点「导出 Excel」备份。
@@ -205,11 +196,6 @@ export default function Registrations() {
           <Button type="link" size="small" style={{ padding: 0 }} onClick={() => setDetail(r)}>详细</Button>
           <Button type="link" size="small" style={{ padding: 0 }} onClick={() => openEdit(r)}>编辑</Button>
           <Button type="link" size="small" style={{ padding: 0 }} onClick={() => openTracking(r)}>回填快递</Button>
-          {r.status !== 'cancelled' && (
-            <Popconfirm title="确定作废该报名单？名额会被释放，员工可重新报名。" onConfirm={() => cancelRow(r)}>
-              <Button type="link" size="small" danger style={{ padding: 0 }}>取消</Button>
-            </Popconfirm>
-          )}
           <Button type="link" size="small" danger style={{ padding: 0 }} onClick={() => deleteRow(r)}>删除</Button>
         </Space>
       ),
@@ -222,17 +208,35 @@ export default function Registrations() {
     <div>
       {/* 看板 */}
       <Row gutter={12} style={{ marginBottom: 12 }}>
-        <Col span={4}><Card size="small"><Statistic title="报名总数" value={stats?.total ?? 0} /></Card></Col>
-        <Col span={4}><Card size="small"><Statistic title="待邮寄" value={stats?.pending ?? 0} valueStyle={{ color: '#d48806' }} /></Card></Col>
-        <Col span={4}><Card size="small"><Statistic title="已邮寄" value={stats?.shipped ?? 0} valueStyle={{ color: '#389e0d' }} /></Card></Col>
-        <Col span={4}><Card size="small"><Statistic title="已取消" value={stats?.cancelled ?? 0} valueStyle={{ color: '#8c8c8c' }} /></Card></Col>
-        <Col span={4}><Card size="small"><Statistic title="占用名额" value={stats?.seats ?? 0} /></Card></Col>
-        <Col span={4}>
-          <Card size="small" title="场次余量" styles={{ body: { padding: '8px 16px' } }}>
-            <div style={{ maxHeight: 56, overflowY: 'auto' }}>
+        <Col span={6}><Card size="small"><Statistic title="报名总数" value={stats?.total ?? 0} /></Card></Col>
+        <Col span={6}><Card size="small"><Statistic title="占用名额/观演人数" value={stats?.seats ?? 0} /></Card></Col>
+        <Col span={6}><Card size="small"><Statistic title="已邮寄" value={stats?.shipped ?? 0} valueStyle={{ color: '#389e0d' }} /></Card></Col>
+        <Col span={6}><Card size="small"><Statistic title="待邮寄" value={stats?.pending ?? 0} valueStyle={{ color: '#d48806' }} /></Card></Col>
+      </Row>
+
+      {/* 场次余量单独占一行：剧目汇总 + 该剧目下每个场次的余量 */}
+      <Row gutter={12} style={{ marginBottom: 12 }}>
+        <Col span={24}>
+          {/* 不用 size="small"，标题字号才会和「报名管理」一致（antd: small=14px，默认=16px） */}
+          <Card title="场次余量" styles={{ body: { padding: '12px 24px' } }}>
+            <div style={{ maxHeight: 178, overflowY: 'auto' }}>
               {(stats?.shows || []).map((s: any) => (
-                <div key={s.show_id} style={{ fontSize: 12, lineHeight: '18px' }}>
-                  {s.show_name}：剩 {s.remaining} / {s.capacity}
+                <div key={s.show_id} style={{ marginBottom: 12 }}>
+                  <div style={{ fontSize: 14, fontWeight: 600, lineHeight: '22px', color: '#262626' }}>
+                    {s.show_name}
+                    <span style={{ marginLeft: 8, fontWeight: 400, color: '#595959' }}>
+                      合计剩 {s.remaining} / {s.capacity}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', columnGap: 28, rowGap: 2, paddingLeft: 12, marginTop: 3 }}>
+                    {(s.sessions || []).map((x: any) => (
+                      <span key={x.id} style={{ fontSize: 12, lineHeight: '20px', color: '#595959' }}>
+                        {x.name}
+                        {x.show_at ? `（${dayjs(x.show_at).format('MM-DD HH:mm')}）` : ''}：剩 {x.remaining} / {x.capacity}
+                      </span>
+                    ))}
+                    {(s.sessions || []).length === 0 && <span style={{ fontSize: 12, color: '#8c8c8c' }}>暂无场次</span>}
+                  </div>
                 </div>
               ))}
               {(stats?.shows || []).length === 0 && <span style={{ color: '#8c8c8c' }}>暂无场次</span>}
@@ -277,7 +281,6 @@ export default function Registrations() {
               { value: '', label: '全部状态' },
               { value: 'pending', label: '待邮寄' },
               { value: 'shipped', label: '已邮寄' },
-              { value: 'cancelled', label: '已取消' },
             ]}
           />
           <Input.Search

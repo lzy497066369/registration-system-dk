@@ -15,7 +15,6 @@ from ..deps import get_current_admin, require_admin, scoped_activity_ids
 from ..models import (
     Activity, AdminUser, EmailOutbox, Registration, RegistrationLog, Show, TicketSession,
 )
-from ..services.booking import cancel_registration
 from ..services.mailer import enqueue_mail
 from ..utils.timez import now_cn
 
@@ -90,6 +89,9 @@ def _apply_filters(
     keyword: str = "",
 ):
     """列表与导出共用同一套筛选，保证「看到什么就导出什么」。"""
+    # 取消功能已下线（只保留删除）：历史「已取消」单子不再出现在列表 / 导出里，
+    # 效果等同已删除，避免「报名总数里混着取消单」的歧义。
+    query = query.filter(Registration.status != "cancelled")
     if activity_id:
         query = query.filter(Registration.activity_id == activity_id)
     if session_id:
@@ -239,14 +241,14 @@ def registration_stats(
         if allowed is not None and activity_id not in allowed:
             raise HTTPException(403, "无权限查看该活动的统计")
         query = query.filter(Registration.activity_id == activity_id)
-    regs = query.all()
+    # 与列表同口径：历史已取消的单子不计入任何统计
+    regs = query.filter(Registration.status != "cancelled").all()
 
-    counts = {"pending": 0, "shipped": 0, "cancelled": 0}
+    counts = {"pending": 0, "shipped": 0}
     seats = 0
     for r in regs:
         counts[r.status] = counts.get(r.status, 0) + 1
-        if r.status != "cancelled":
-            seats += r.seats
+        seats += r.seats
 
     session_query = db.query(TicketSession)
     if allowed is not None:
@@ -280,7 +282,6 @@ def registration_stats(
         "total": len(regs),
         "pending": counts.get("pending", 0),
         "shipped": counts.get("shipped", 0),
-        "cancelled": counts.get("cancelled", 0),
         "seats": seats,
         "shows": list(by_show.values()),
         "recent": [
@@ -346,40 +347,15 @@ def update_contact(
     return {"ok": True, "changed": changed}
 
 
-@router.post("/{registration_id}/cancel")
-def cancel(
-    registration_id: int,
-    admin=Depends(require_admin),
-    db: Session = Depends(get_db),
-):
-    """后台作废报名单：释放名额，取消后该员工可重新报名。"""
-    reg = db.query(Registration).filter(Registration.id == registration_id).first()
-    if not reg:
-        raise HTTPException(404, "报名单不存在")
-    if reg.status == "cancelled":
-        raise HTTPException(400, "该报名单已取消")
-    cancel_registration(db, reg)
-    db.add(RegistrationLog(
-        registration_id=reg.id,
-        activity_id=reg.activity_id,
-        field="报名状态",
-        old_value=STATUS_TEXT.get(reg.status, reg.status),
-        new_value="已取消",
-        operator=getattr(admin, "username", "admin"),
-    ))
-    db.commit()
-    return {"ok": True}
-
-
 @router.delete("/{registration_id}")
 def delete_registration(
     registration_id: int,
     admin=Depends(require_admin),
     db: Session = Depends(get_db),
 ):
-    """删除报名单（物理删除，与「取消」不同：取消只作废留痕，删除后记录不再存在）。
+    """删除报名单（物理删除）：删除即视为取消报名，记录不再存在，员工可重新报名。
 
-    - 未取消的报名单会先按落库的 seats 退回名额（原子扣减，防止 sold 变负）
+    - 按落库的 seats 退回名额（原子扣减，防止 sold 变负）
     - 关联的修改留痕与邮件队列记录一并删除（外键为 NO ACTION，必须先删子表）
     - 删除后 active_key 随之消失，该员工可以重新报名
     """

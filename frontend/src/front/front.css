@@ -311,7 +311,8 @@ html.front-mode {
 .info-row-block .info-label {
     display: block;
     margin: 0 0 0.06rem;
-    color: #666666;
+    /* 与其它行标签同色（黑），「票券邮寄信息」分组标题仍走 .info-group-title 保持灰 */
+    color: #333333;
 }
 
 .info-row-block .info-value {

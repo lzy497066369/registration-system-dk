@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Button, Card, Input, Select, Space, Table, Tag, message } from 'antd'
+import { Button, Card, Col, Input, Row, Select, Space, Statistic, Table, Tag, message } from 'antd'
 import { DownloadOutlined, ReloadOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import { api, downloadApi } from '../../api'
@@ -20,6 +20,8 @@ export default function MyRegistrations() {
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
   const [loading, setLoading] = useState(false)
+  // 顶部看板：与「报名管理」同一套口径（报名总数 / 占用名额 / 已邮寄 / 待邮寄）
+  const [stats, setStats] = useState<any>(null)
   const [msg, holder] = message.useMessage()
 
   useEffect(() => { setActId(activityId) }, [activityId])
@@ -45,7 +47,17 @@ export default function MyRegistrations() {
     }
   }
 
-  useEffect(() => { load(1, pageSize, actId) }, [actId])
+  async function loadStats(a = actId) {
+    try {
+      const q = new URLSearchParams()
+      if (a) q.set('activity_id', String(a))
+      setStats(await api(`/api/admin/registrations/stats?${q.toString()}`))
+    } catch {
+      // 统计失败不影响明细列表
+    }
+  }
+
+  useEffect(() => { load(1, pageSize, actId); loadStats(actId) }, [actId])
 
   function exportExcel() {
     const q = new URLSearchParams()
@@ -94,11 +106,48 @@ export default function MyRegistrations() {
   return (
     <div>
       {holder}
+      <Row gutter={12} style={{ marginBottom: 12 }}>
+        <Col span={6}><Card size="small"><Statistic title="报名总数" value={stats?.total ?? 0} /></Card></Col>
+        <Col span={6}><Card size="small"><Statistic title="占用名额/观演人数" value={stats?.seats ?? 0} /></Card></Col>
+        <Col span={6}><Card size="small"><Statistic title="已邮寄" value={stats?.shipped ?? 0} valueStyle={{ color: '#389e0d' }} /></Card></Col>
+        <Col span={6}><Card size="small"><Statistic title="待邮寄" value={stats?.pending ?? 0} valueStyle={{ color: '#d48806' }} /></Card></Col>
+      </Row>
+
+      {/* 场次余量：与「报名管理」一致，剧目汇总 + 该剧目下每个场次的余量 */}
+      <Row gutter={12} style={{ marginBottom: 12 }}>
+        <Col span={24}>
+          {/* 不用 size="small"，标题字号才会和「报名情况」卡片一致（antd: small=14px，默认=16px） */}
+          <Card title="场次余量" styles={{ body: { padding: '12px 24px' } }}>
+            <div style={{ maxHeight: 178, overflowY: 'auto' }}>
+              {(stats?.shows || []).map((s: any) => (
+                <div key={s.show_id} style={{ marginBottom: 12 }}>
+                  <div style={{ fontSize: 14, fontWeight: 600, lineHeight: '22px', color: '#262626' }}>
+                    {s.show_name}
+                    <span style={{ marginLeft: 8, fontWeight: 400, color: '#595959' }}>
+                      合计剩 {s.remaining} / {s.capacity}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', columnGap: 28, rowGap: 2, paddingLeft: 12, marginTop: 3 }}>
+                    {(s.sessions || []).map((x: any) => (
+                      <span key={x.id} style={{ fontSize: 12, lineHeight: '20px', color: '#595959' }}>
+                        {x.name}
+                        {x.show_at ? `（${dayjs(x.show_at).format('MM-DD HH:mm')}）` : ''}：剩 {x.remaining} / {x.capacity}
+                      </span>
+                    ))}
+                    {(s.sessions || []).length === 0 && <span style={{ fontSize: 12, color: '#8c8c8c' }}>暂无场次</span>}
+                  </div>
+                </div>
+              ))}
+              {(stats?.shows || []).length === 0 && <span style={{ color: '#8c8c8c' }}>暂无场次</span>}
+            </div>
+          </Card>
+        </Col>
+      </Row>
       <Card
         title="报名情况"
         extra={
           <Space>
-            <Button icon={<ReloadOutlined />} onClick={() => load(page)}>刷新</Button>
+            <Button icon={<ReloadOutlined />} onClick={() => { load(page); loadStats() }}>刷新</Button>
             <Button type="primary" icon={<DownloadOutlined />} onClick={exportExcel}>导出 Excel</Button>
           </Space>
         }
@@ -119,7 +168,6 @@ export default function MyRegistrations() {
               { value: '', label: '全部状态' },
               { value: 'pending', label: '待邮寄' },
               { value: 'shipped', label: '已邮寄' },
-              { value: 'cancelled', label: '已取消' },
             ]}
           />
           <Input.Search
